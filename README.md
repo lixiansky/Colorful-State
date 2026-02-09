@@ -11,6 +11,8 @@
 - **🛡️ 强力反检测**: 使用 Playwright + Stealth 插件模拟真实浏览器，绕过 Nitter 验证
 - **🌐 智能翻译**: 集成 DeepSeek API，自动将推文翻译成简体中文 (temperature=1.3)
 - **💾 数据持久化**: 使用 Neon PostgreSQL 云数据库存储推文数据
+- **🎨 现代化 UI**: 仿 TikTok 风格设计，支持深色/浅色模式，流畅动画体验
+- **🎬 视频播放**: 内嵌视频播放器，支持封面预览、原生控制及防盗链绕过
 - **🖼️ 完整内容**: 支持提取推文文本、图片、视频等完整信息
 - **🔄 自动去重**: 基于 tweet_id 的唯一约束，避免重复存储
 - **⚡ 灵活运行**: 支持单次运行或循环监控模式
@@ -21,12 +23,13 @@
 |------|----------------|-------------------|
 | 推文抓取 | ✅ | ✅ |
 | 单条推文抓取 | ✅ | ❌ |
-| 图片/视频 | ✅ | ✅ |
+| 图片/视频 | ✅ (修复防盗链) | ✅ |
 | 翻译 | ✅ DeepSeek API | ✅ Google Translate |
 | 存储 | ✅ Neon Database | ❌ |
+| 界面 | ✅ 现代化 Web UI | ❌ |
 | 通知 | ❌ | ✅ 钉钉 |
 | 去重 | ✅ 数据库约束 | ✅ 本地文件 |
-| GitHub Actions | ✅ | ✅ |
+| GitHub Actions | ✅ (自动部署 Pages) | ✅ |
 
 ## 🚀 快速开始
 
@@ -284,6 +287,9 @@ export LOOP_INTERVAL=600  # 每10分钟
 python colorful_state.py
 ```
 
+> **注意**: 在 GitHub Actions 环境中，Monitor 工作流完成后会自动触发 Pages 部署工作流，确保网站内容实时更新。
+```
+
 ## 🛠️ 技术架构
 
 ```
@@ -330,8 +336,13 @@ A: 数据库中 `tweet_id` 字段有 UNIQUE 约束，使用 `ON CONFLICT DO UPDA
 **Q: 可以同时监控多个用户吗？**  
 A: 可以，在 `TWITTER_USERS` 中用逗号分隔多个用户名即可。
 
-**Q: 翻译失败怎么办？**  
 A: 如果 DeepSeek API 调用失败，`content_zh` 字段会保存为 NULL，不影响原文存储。
+
+**Q: 为什么视频或图片无法显示？**  
+A: Twitter 的媒体资源有防盗链保护。本项目已通过以下方式解决：
+1. 添加 `<meta name="referrer" content="no-referrer">` 绕过 Referer 检查
+2. 自动将不稳定的 Nitter 图片域名替换为官方 `pbs.twimg.com` 域名
+3. 视频使用原生 HTML5 播放器，且配置了 `poster` 封面
 
 ## 📄 许可证
 
