@@ -648,6 +648,62 @@
             console.error(err);
         });
 
+        function normalizeImageUrl(url) {
+            if (!url) return '';
+            // 将 Nitter 实例的图片链接替换为官方 pbs.twimg.com 链接
+            // Nitter 链接格式通常是: https://nitter.net/pic/enc/bimg/.....
+            // 或者: https://nitter.net/pic/media%2F.....
+            // 我们需要提取出原始的 path
+
+            try {
+                const urlObj = new URL(url);
+                // 如果已经是推特官方链接，直接返回
+                if (urlObj.hostname === 'pbs.twimg.com') return url;
+
+                // 尝试从 Nitter 链接中恢复
+                if (url.includes('/pic/')) {
+                    // 简单处理：直接替换所有已知的 Nitter 域名为 pbs.twimg.com 可能会有问题，
+                    // 因为路径结构不同。
+                    // Nitter: /pic/media%2FImgID.jpg
+                    // Twitter: /media/ImgID.jpg
+
+                    // 正则匹配 /media/ 或 /enc/ 后的部分
+                    const match = url.match(/\/pic\/(?:media|enc)\/([^\?]+)/);
+                    if (match && match[1]) {
+                        // 解码 URL 编码的字符
+                        let path = decodeURIComponent(match[1]);
+                        // 处理 base64 编码的情况 (Nitter sometimes receives base64 encoded strings)
+                        // 这里简化处理：大多数情况下 Nitter 代理了 twimg，但 URL结构复杂。
+
+                        // 更可靠的方法：
+                        // 观察到我们数据库存的往往是 Nitter 链接。
+                        // 如果是 https://nitter.privacyredirect.com/pic/media%2FG_...jpg
+                        // 对应 https://pbs.twimg.com/media/G_...jpg
+
+                        if (path.startsWith('bimg/')) {
+                            // 处理 /enc/bimg/ 格式，通常难以直接转换回 twimg，保持原样或尝试其他代理
+                            return url;
+                        }
+
+                        // 移除可能的前缀
+                        return `https://pbs.twimg.com/media/${path}`;
+                    }
+                }
+
+                // 如果是 nitter.privacyredirect.com 等实例，通常可以直接替换域名和路径
+                // 但为了稳妥，我们使用一个通用的替换策略：
+                // 如果 URL 包含 /media/ 且不是 twimg，尝试替换为 pbs.twimg.com
+                if (url.includes('/media/') && !url.includes('twimg.com')) {
+                    const filename = url.split('/').pop().split('?')[0];
+                    return `https://pbs.twimg.com/media/${filename}`;
+                }
+
+            } catch (e) {
+                console.error('Error normalizing URL:', url, e);
+            }
+            return url;
+        }
+
         function renderPage(page) {
             currentPage = page;
             const start = (page - 1) * TWEETS_PER_PAGE;
@@ -673,10 +729,14 @@
                 // 媒体部分
                 let mediaHtml = '<div class="tweet-media">';
 
+                // 处理图片链接
+                const images = (tweet.images || []).map(normalizeImageUrl);
+                const videoPoster = images.length > 0 ? images[0] : '';
+
                 if (tweet.video_url) {
                     // 显示视频，使用图片作为封面
                     const videoId = `video-${tweet.tweet_id}`;
-                    const poster = tweet.images && tweet.images.length > 0 ? escapeHtml(tweet.images[0]) : '';
+                    const poster = tweet.images && tweet.images.length > 0 ? escapeHtml(normalizeImageUrl(tweet.images[0])) : '';
                     mediaHtml += `
                         <video id="${videoId}" 
                                preload="metadata" 
@@ -692,8 +752,8 @@
                         </video>
                         <div class="video-badge">🎬 视频</div>
                     `;
-                } else if (tweet.images && tweet.images.length > 0) {
-                    mediaHtml += `<img src="${escapeHtml(tweet.images[0])}" alt="推文图片">`;
+                } else if (images.length > 0) {
+                    mediaHtml += `<img src="${escapeHtml(images[0])}" alt="推文图片" onerror="this.src='${escapeHtml(tweet.images[0])}'">`; // Fallback to original if normalized fails
                 } else {
                     mediaHtml += '<div class="tweet-media-placeholder">📝</div>';
                 }
