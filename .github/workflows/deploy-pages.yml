@@ -1,8 +1,10 @@
 name: Deploy to GitHub Pages
 
 on:
-  repository_dispatch:
-    types: [scraper-completed]  # 由 monitor.yml 触发
+  workflow_run:
+    workflows: ["Colorful State Monitor"]  # 当 Monitor 完成时触发
+    types:
+      - completed
   workflow_dispatch:  # 允许手动触发
   push:
     branches:
