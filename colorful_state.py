@@ -37,10 +37,13 @@ INSTANCES_FILE = os.path.join(BASE_DIR, 'instances.json')
 NITTER_INSTANCES = [
     'https://xcancel.com',  # 支持视频 (source tag)
     'https://nitter.privacyredirect.com',  # 支持视频 (data-url)
-    'https://nitter.poast.org',
-    'https://nitter.hu',
-    'https://nitter.moomoo.me',
-    'https://nitter.net',
+    "https://nitter.net",
+    "https://nitter.catsarch.com",
+    "https://nitter.tiekoetter.com",
+    "https://nitter.poast.org",
+    "https://nuku.trabun.org",
+    "https://lightbrd.com",
+    "https://nitter.space"
 ]
 
 def get_random_user_agent():
