@@ -210,15 +210,35 @@ def scrape_nitter_with_playwright(target, dynamic_instances=None):
                     # 提取视频
                     video_url = None
                     try:
-                        video_el = item.select_one('video source')
-                        if not video_el:
-                            video_el = item.select_one('video')
+                        # 方法1: 查找 video 标签中的 source
+                        video_source = item.select_one('video source')
+                        if video_source:
+                            v_src = video_source.get('src', '')
+                            if v_src:
+                                if v_src.startswith('//'):
+                                    video_url = 'https:' + v_src
+                                elif v_src.startswith('/'):
+                                    video_url = instance.rstrip('/') + v_src
+                                else:
+                                    video_url = v_src
+                                print(f"[{target}] 找到视频 (source): {video_url[:50]}...")
                         
-                        if video_el:
-                            # 提取封面图
-                            poster_el = item.select_one('video')
-                            if poster_el:
-                                poster = poster_el.get('poster', '')
+                        # 方法2: 查找 video 标签的 src 属性
+                        if not video_url:
+                            video_tag = item.select_one('video')
+                            if video_tag:
+                                v_src = video_tag.get('src', '')
+                                if v_src:
+                                    if v_src.startswith('//'):
+                                        video_url = 'https:' + v_src
+                                    elif v_src.startswith('/'):
+                                        video_url = instance.rstrip('/') + v_src
+                                    else:
+                                        video_url = v_src
+                                    print(f"[{target}] 找到视频 (video tag): {video_url[:50]}...")
+                                
+                                # 提取封面图
+                                poster = video_tag.get('poster', '')
                                 if poster:
                                     if poster.startswith('//'):
                                         full_poster = 'https:' + poster
@@ -229,16 +249,32 @@ def scrape_nitter_with_playwright(target, dynamic_instances=None):
                                     full_poster = get_original_image_url(full_poster)
                                     if full_poster not in images:
                                         images.append(full_poster)
-
-                            # 提取视频流地址
-                            v_src = video_el.get('src', '')
-                            if v_src:
-                                if v_src.startswith('//'):
-                                    video_url = 'https:' + v_src
-                                elif v_src.startswith('/'):
-                                    video_url = instance.rstrip('/') + v_src
-                                else:
-                                    video_url = v_src
+                        
+                        # 方法3: 查找 .video-container 或 .attachments 中的链接
+                        if not video_url:
+                            video_container = item.select_one('.video-container, .attachments')
+                            if video_container:
+                                # 查找所有可能的视频链接
+                                video_links = video_container.select('a[href*="video"], a[href*=".mp4"], a[href*=".m3u8"]')
+                                for link in video_links:
+                                    href = link.get('href', '')
+                                    if href and ('.mp4' in href or '.m3u8' in href or 'video' in href):
+                                        if href.startswith('//'):
+                                            video_url = 'https:' + href
+                                        elif href.startswith('/'):
+                                            video_url = instance.rstrip('/') + href
+                                        else:
+                                            video_url = href
+                                        print(f"[{target}] 找到视频 (link): {video_url[:50]}...")
+                                        break
+                        
+                        # 如果仍未找到，记录调试信息
+                        if not video_url:
+                            # 检查是否有视频相关的类或元素
+                            has_video_indicator = item.select_one('.video-container, .video-overlay, [class*="video"]')
+                            if has_video_indicator:
+                                print(f"[{target}] 检测到视频指示器但未能提取 URL，可能需要更新选择器")
+                                
                     except Exception as e:
                         print(f"[{target}] 视频提取异常: {e}")
 
@@ -589,18 +625,70 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
                 
                 # 提取视频
                 video_url = None
-                video_el = main_tweet.select_one('video source')
-                if not video_el:
-                    video_el = main_tweet.select_one('video')
-                if video_el:
-                    v_src = video_el.get('src', '')
-                    if v_src:
-                        if v_src.startswith('//'):
-                            video_url = 'https:' + v_src
-                        elif v_src.startswith('/'):
-                            video_url = instance.rstrip('/') + v_src
-                        else:
-                            video_url = v_src
+                try:
+                    # 方法1: video source 标签
+                    video_source = main_tweet.select_one('video source')
+                    if video_source:
+                        v_src = video_source.get('src', '')
+                        if v_src:
+                            if v_src.startswith('//'):
+                                video_url = 'https:' + v_src
+                            elif v_src.startswith('/'):
+                                video_url = instance.rstrip('/') + v_src
+                            else:
+                                video_url = v_src
+                            print(f"[{username}/{tweet_id}] 找到视频 (source): {video_url[:50]}...")
+                    
+                    # 方法2: video 标签的 src 属性
+                    if not video_url:
+                        video_tag = main_tweet.select_one('video')
+                        if video_tag:
+                            v_src = video_tag.get('src', '')
+                            if v_src:
+                                if v_src.startswith('//'):
+                                    video_url = 'https:' + v_src
+                                elif v_src.startswith('/'):
+                                    video_url = instance.rstrip('/') + v_src
+                                else:
+                                    video_url = v_src
+                                print(f"[{username}/{tweet_id}] 找到视频 (video tag): {video_url[:50]}...")
+                            
+                            # 提取封面图
+                            poster = video_tag.get('poster', '')
+                            if poster:
+                                if poster.startswith('//'):
+                                    full_poster = 'https:' + poster
+                                elif poster.startswith('/'):
+                                    full_poster = instance.rstrip('/') + poster
+                                else:
+                                    full_poster = poster
+                                full_poster = get_original_image_url(full_poster)
+                                if full_poster not in images:
+                                    images.append(full_poster)
+                    
+                    # 方法3: 查找视频链接
+                    if not video_url:
+                        video_links = main_tweet.select('a[href*="video"], a[href*=".mp4"], a[href*=".m3u8"]')
+                        for link in video_links:
+                            href = link.get('href', '')
+                            if href and ('.mp4' in href or '.m3u8' in href):
+                                if href.startswith('//'):
+                                    video_url = 'https:' + href
+                                elif href.startswith('/'):
+                                    video_url = instance.rstrip('/') + href
+                                else:
+                                    video_url = href
+                                print(f"[{username}/{tweet_id}] 找到视频 (link): {video_url[:50]}...")
+                                break
+                    
+                    if not video_url:
+                        # 检查是否有视频指示器
+                        has_video = main_tweet.select_one('.video-container, .video-overlay, [class*="video"]')
+                        if has_video:
+                            print(f"[{username}/{tweet_id}] 检测到视频但未能提取 URL")
+                            
+                except Exception as e:
+                    print(f"[{username}/{tweet_id}] 视频提取异常: {e}")
                 
                 tweet_data = {
                     'content': content_el.get_text(strip=True),
