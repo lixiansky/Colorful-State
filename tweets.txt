@@ -1,0 +1,17 @@
+# Colorful State 推文抓取列表
+# 格式: 每行一个推文 URL
+# 以 # 开头的行为注释，会被忽略
+# 空行会被忽略
+
+# 示例: Elon Musk 的推文
+# https://x.com/elonmusk/status/1234567890123456789
+
+# 示例: OpenAI 的推文
+# https://twitter.com/OpenAI/status/9876543210987654321
+
+# 提示: 
+# - 支持 x.com 和 twitter.com 域名
+# - 已抓取的推文可以注释掉或保留
+# - 脚本会自动检查哪些已抓取，仅抓取新的推文
+
+# 在下方添加您要抓取的推文 URL:
