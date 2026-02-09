@@ -16,3 +16,5 @@
 
 # 在下方添加您要抓取的推文 URL:
 https://x.com/remi_tiro/status/2020614112234094605
+https://x.com/RuiHuang_art/status/2020668857862467872
+https://x.com/AnimexTwts/status/1980272487071096971
