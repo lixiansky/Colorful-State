@@ -36,6 +36,13 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
       
+      - name: Setup database (if needed)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Checking database setup..."
+          python setup_db.py || echo "Database already set up or setup failed (continuing anyway)"
+      
       - name: Run scraper
         env:
           TWITTER_USERS: ${{ secrets.TWITTER_USERS }}
