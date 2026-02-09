@@ -411,6 +411,13 @@ def save_tweet_to_db(tweet):
                 except:
                     print(f"[数据库] 无法解析时间格式: {tweet['published']}")
         
+        # 记录视频 URL 信息
+        video_url = tweet.get('video_url')
+        if video_url:
+            print(f"[数据库] 📹 准备保存视频 URL: {video_url[:100]}...")
+        else:
+            print(f"[数据库] ⚠️  推文没有视频 URL")
+        
         # 插入或更新推文
         cursor.execute("""
             INSERT INTO tweets (tweet_id, author, content, content_zh, published_at, is_retweet, images, video_url, source_url)
@@ -432,14 +439,23 @@ def save_tweet_to_db(tweet):
             published_at,
             tweet.get('is_retweet', False),
             Json(tweet.get('images', [])),
-            tweet.get('video_url'),
+            video_url,
             tweet.get('link')
         ))
         
         tweet_db_id = cursor.fetchone()[0]
         conn.commit()
         
-        print(f"[数据库] 推文已保存 (ID: {tweet_db_id}, Tweet ID: {tweet['guid']})")
+        # 验证保存的数据
+        cursor.execute("SELECT video_url FROM tweets WHERE id = %s;", (tweet_db_id,))
+        saved_video_url = cursor.fetchone()[0]
+        
+        if saved_video_url:
+            print(f"[数据库] ✅ 推文已保存，视频 URL 已存储: {saved_video_url[:100]}...")
+        else:
+            print(f"[数据库] ✅ 推文已保存 (ID: {tweet_db_id}, Tweet ID: {tweet['guid']})")
+            if video_url:
+                print(f"[数据库] ⚠️  警告: 视频 URL 未能保存到数据库！")
         
         cursor.close()
         conn.close()
@@ -447,7 +463,9 @@ def save_tweet_to_db(tweet):
         return True
         
     except Exception as e:
-        print(f"[数据库] 保存推文失败: {e}")
+        print(f"[数据库] ❌ 保存推文失败: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def parse_tweet_url(url):
