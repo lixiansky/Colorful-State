@@ -326,17 +326,13 @@
             object-fit: cover;
         }
 
-        .tweet-media-placeholder {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            color: var(--text-tertiary);
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        color: var(--text-tertiary);
         }
 
         .video-badge {
@@ -353,47 +349,6 @@
             align-items: center;
             gap: 4px;
             z-index: 10;
-        }
-
-        .play-button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 60px;
-            height: 60px;
-            background: rgba(254, 44, 85, 0.9);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            z-index: 10;
-        }
-
-        .play-button:hover {
-            background: rgba(254, 44, 85, 1);
-            transform: translate(-50%, -50%) scale(1.1);
-        }
-
-        .play-button::after {
-            content: '';
-            width: 0;
-            height: 0;
-            border-left: 20px solid white;
-            border-top: 12px solid transparent;
-            border-bottom: 12px solid transparent;
-            margin-left: 4px;
-        }
-
-        .play-button.playing::after {
-            border-left: none;
-            width: 6px;
-            height: 24px;
-            background: white;
-            box-shadow: 12px 0 0 white;
-            margin-left: 0;
         }
 
         .tweet-content-wrapper {
@@ -659,27 +614,16 @@
 
         initTheme();
 
-        // 视频播放控制
-        function playVideo(videoElement, playButton) {
+        // 视频播放控制 - 确保同时只有一个视频播放
+        let currentPlayingVideo = null;
+
+        window.handleVideoPlay = function (videoElement) {
             // 暂停当前正在播放的视频
             if (currentPlayingVideo && currentPlayingVideo !== videoElement) {
                 currentPlayingVideo.pause();
-                const prevButton = currentPlayingVideo.parentElement.querySelector('.play-button');
-                if (prevButton) {
-                    prevButton.classList.remove('playing');
-                }
             }
-
-            if (videoElement.paused) {
-                videoElement.play();
-                playButton.classList.add('playing');
-                currentPlayingVideo = videoElement;
-            } else {
-                videoElement.pause();
-                playButton.classList.remove('playing');
-                currentPlayingVideo = null;
-            }
-        }
+            currentPlayingVideo = videoElement;
+        };
 
         // 加载数据
         Promise.all([
@@ -727,13 +671,22 @@
                 let mediaHtml = '<div class="tweet-media">';
 
                 if (tweet.video_url) {
-                    // 显示视频
+                    // 显示视频，使用图片作为封面
                     const videoId = `video-${tweet.tweet_id}`;
+                    const poster = tweet.images && tweet.images.length > 0 ? escapeHtml(tweet.images[0]) : '';
                     mediaHtml += `
-                        <video id="${videoId}" preload="metadata" playsinline>
+                        <video id="${videoId}" 
+                               preload="metadata" 
+                               playsinline 
+                               ${poster ? `poster="${poster}"` : ''}
+                               controls
+                               controlsList="nodownload"
+                               onplay="handleVideoPlay(this)"
+                               style="cursor: pointer;">
                             <source src="${escapeHtml(tweet.video_url)}" type="video/mp4">
+                            <source src="${escapeHtml(tweet.video_url)}" type="application/x-mpegURL">
+                            您的浏览器不支持视频播放
                         </video>
-                        <div class="play-button" onclick="playVideo(document.getElementById('${videoId}'), this); event.stopPropagation();"></div>
                         <div class="video-badge">🎬 视频</div>
                     `;
                 } else if (tweet.images && tweet.images.length > 0) {
