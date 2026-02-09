@@ -1,5 +1,9 @@
 # Colorful State - Twitter 推文采集与存储系统 🎨
 
+[![GitHub](https://img.shields.io/badge/GitHub-Colorful--State-blue?logo=github)](https://github.com/lixiansky/Colorful-State)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+
 一个基于 **Playwright Stealth** 技术的 Twitter 推文采集系统，自动抓取指定用户的推文，使用 **DeepSeek API** 翻译成中文，并存储到 **Neon PostgreSQL** 数据库中。
 
 ## ✨ 核心特性
