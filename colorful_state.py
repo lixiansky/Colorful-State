@@ -33,10 +33,10 @@ INTERVAL = int(os.environ.get('LOOP_INTERVAL', '600'))  # 默认 10 分钟
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INSTANCES_FILE = os.path.join(BASE_DIR, 'instances.json')
 
-# Nitter 实例列表
+# Nitter 实例列表（优先使用支持视频的实例）
 NITTER_INSTANCES = [
-    'https://xcancel.com',
-    'https://nitter.privacyredirect.com',
+    'https://xcancel.com',  # 支持视频 (source tag)
+    'https://nitter.privacyredirect.com',  # 支持视频 (data-url)
     'https://nitter.poast.org',
     'https://nitter.hu',
     'https://nitter.moomoo.me',
@@ -618,6 +618,8 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
                     print(f"[{username}/{tweet_id}] 在 {instance} 上未找到推文")
                     context.close()
                     continue
+                
+                print(f"[{username}/{tweet_id}] ✅ 使用实例: {instance}")
                 
                 # 提取推文信息（复用原有逻辑）
                 content_el = main_tweet.select_one('.tweet-content')
