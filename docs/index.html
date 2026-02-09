@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Colorful State - 推文收藏</title>
+
+    <!-- DouyinSans 字体 -->
+    <link href="https://fontsapi.zeoseven.com/84/main/result.css" onload="this.rel='stylesheet'" rel="preload"
+        as="style" crossorigin />
+    <noscript>
+        <link rel="stylesheet" href="https://fontsapi.zeoseven.com/84/main/result.css" />
+    </noscript>
+
     <style>
         :root {
             --bg-primary: #ffffff;
@@ -39,7 +47,8 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            font-family: "DouyinSans", -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-weight: normal;
             background: var(--bg-primary);
             color: var(--text-primary);
             transition: background-color 0.3s, color 0.3s;
@@ -54,6 +63,19 @@
             top: 0;
             z-index: 100;
             box-shadow: var(--shadow);
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .header-content {
@@ -74,12 +96,46 @@
 
         .logo-icon {
             font-size: 32px;
+            animation: rotate 3s ease-in-out infinite;
+        }
+
+        @keyframes rotate {
+
+            0%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            50% {
+                transform: rotate(10deg);
+            }
         }
 
         .header-actions {
             display: flex;
             align-items: center;
             gap: 16px;
+        }
+
+        .github-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .github-link:hover {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
         }
 
         .theme-toggle {
@@ -98,12 +154,26 @@
 
         .theme-toggle:hover {
             background: var(--border-color);
+            transform: translateY(-2px);
         }
 
         .stats-bar {
             background: var(--bg-secondary);
             padding: 20px 24px;
             border-bottom: 1px solid var(--border-color);
+            animation: fadeIn 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .stats-content {
@@ -116,6 +186,35 @@
 
         .stat-item {
             text-align: center;
+            animation: scaleIn 0.5s ease-out backwards;
+        }
+
+        .stat-item:nth-child(1) {
+            animation-delay: 0.3s;
+        }
+
+        .stat-item:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+
+        .stat-item:nth-child(3) {
+            animation-delay: 0.5s;
+        }
+
+        .stat-item:nth-child(4) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .stat-value {
@@ -146,6 +245,7 @@
             background: var(--bg-card);
             color: var(--text-primary);
             transition: all 0.2s;
+            animation: fadeIn 0.6s ease-out 0.7s both;
         }
 
         .search-box:focus {
@@ -174,6 +274,19 @@
             cursor: pointer;
             display: flex;
             flex-direction: column;
+            animation: fadeInUp 0.5s ease-out backwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .tweet-card:hover {
@@ -186,12 +299,25 @@
             position: relative;
             width: 100%;
             padding-top: 133.33%;
-            /* 3:4 aspect ratio like TikTok */
             background: var(--bg-secondary);
             overflow: hidden;
         }
 
         .tweet-media img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .tweet-card:hover .tweet-media img {
+            transform: scale(1.05);
+        }
+
+        .tweet-media video {
             position: absolute;
             top: 0;
             left: 0;
@@ -226,6 +352,48 @@
             display: flex;
             align-items: center;
             gap: 4px;
+            z-index: 10;
+        }
+
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(254, 44, 85, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .play-button:hover {
+            background: rgba(254, 44, 85, 1);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .play-button::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 20px solid white;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            margin-left: 4px;
+        }
+
+        .play-button.playing::after {
+            border-left: none;
+            width: 6px;
+            height: 24px;
+            background: white;
+            box-shadow: 12px 0 0 white;
+            margin-left: 0;
         }
 
         .tweet-content-wrapper {
@@ -323,6 +491,7 @@
             background: var(--accent-color);
             color: white;
             border-color: var(--accent-color);
+            transform: translateY(-2px);
         }
 
         .pagination button:disabled {
@@ -379,6 +548,10 @@
             .logo {
                 font-size: 20px;
             }
+
+            .github-link span {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -391,6 +564,13 @@
                 <span>Colorful State</span>
             </div>
             <div class="header-actions">
+                <a href="https://github.com/lixiansky" class="github-link" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                        <path
+                            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                    </svg>
+                    <span>@lixiansky</span>
+                </a>
                 <button class="theme-toggle" onclick="toggleTheme()">
                     <span id="theme-icon">🌙</span>
                     <span id="theme-text">暗黑模式</span>
@@ -440,6 +620,7 @@
         let filteredTweets = [];
         let currentPage = 1;
         const TWEETS_PER_PAGE = 12;
+        let currentPlayingVideo = null;
 
         // 主题切换
         function toggleTheme() {
@@ -478,6 +659,28 @@
 
         initTheme();
 
+        // 视频播放控制
+        function playVideo(videoElement, playButton) {
+            // 暂停当前正在播放的视频
+            if (currentPlayingVideo && currentPlayingVideo !== videoElement) {
+                currentPlayingVideo.pause();
+                const prevButton = currentPlayingVideo.parentElement.querySelector('.play-button');
+                if (prevButton) {
+                    prevButton.classList.remove('playing');
+                }
+            }
+
+            if (videoElement.paused) {
+                videoElement.play();
+                playButton.classList.add('playing');
+                currentPlayingVideo = videoElement;
+            } else {
+                videoElement.pause();
+                playButton.classList.remove('playing');
+                currentPlayingVideo = null;
+            }
+        }
+
         // 加载数据
         Promise.all([
             fetch('data.json').then(res => res.json()),
@@ -515,20 +718,30 @@
             container.innerHTML = '';
             container.className = 'tweets-grid';
 
-            tweets.forEach(tweet => {
+            tweets.forEach((tweet, index) => {
                 const card = document.createElement('div');
                 card.className = 'tweet-card';
+                card.style.animationDelay = `${index * 0.1}s`;
 
                 // 媒体部分
                 let mediaHtml = '<div class="tweet-media">';
-                if (tweet.images && tweet.images.length > 0) {
+
+                if (tweet.video_url) {
+                    // 显示视频
+                    const videoId = `video-${tweet.tweet_id}`;
+                    mediaHtml += `
+                        <video id="${videoId}" preload="metadata" playsinline>
+                            <source src="${escapeHtml(tweet.video_url)}" type="video/mp4">
+                        </video>
+                        <div class="play-button" onclick="playVideo(document.getElementById('${videoId}'), this); event.stopPropagation();"></div>
+                        <div class="video-badge">🎬 视频</div>
+                    `;
+                } else if (tweet.images && tweet.images.length > 0) {
                     mediaHtml += `<img src="${escapeHtml(tweet.images[0])}" alt="推文图片">`;
                 } else {
                     mediaHtml += '<div class="tweet-media-placeholder">📝</div>';
                 }
-                if (tweet.video_url) {
-                    mediaHtml += '<div class="video-badge">🎬 视频</div>';
-                }
+
                 mediaHtml += '</div>';
 
                 // 内容部分
@@ -548,17 +761,17 @@
                 contentHtml += `
                         <div class="tweet-footer">
                             <div class="timestamp">${formatDate(tweet.published_at)}</div>
-                            ${tweet.source_url ? `<a href="${escapeHtml(tweet.source_url)}" class="view-link" target="_blank">查看原文 →</a>` : ''}
+                            ${tweet.source_url ? `<a href="${escapeHtml(tweet.source_url)}" class="view-link" target="_blank" onclick="event.stopPropagation()">查看原文 →</a>` : ''}
                         </div>
                     </div>
                 `;
 
                 card.innerHTML = mediaHtml + contentHtml;
 
-                // 点击卡片打开原推文
+                // 点击卡片打开原推文（但不包括视频区域）
                 if (tweet.source_url) {
                     card.onclick = (e) => {
-                        if (e.target.tagName !== 'A') {
+                        if (!e.target.closest('.play-button') && !e.target.closest('video') && e.target.tagName !== 'A') {
                             window.open(tweet.source_url, '_blank');
                         }
                     };
@@ -579,12 +792,26 @@
         }
 
         document.getElementById('prev-btn').addEventListener('click', () => {
-            if (currentPage > 1) renderPage(currentPage - 1);
+            if (currentPage > 1) {
+                // 暂停当前播放的视频
+                if (currentPlayingVideo) {
+                    currentPlayingVideo.pause();
+                    currentPlayingVideo = null;
+                }
+                renderPage(currentPage - 1);
+            }
         });
 
         document.getElementById('next-btn').addEventListener('click', () => {
             const totalPages = Math.ceil(filteredTweets.length / TWEETS_PER_PAGE);
-            if (currentPage < totalPages) renderPage(currentPage + 1);
+            if (currentPage < totalPages) {
+                // 暂停当前播放的视频
+                if (currentPlayingVideo) {
+                    currentPlayingVideo.pause();
+                    currentPlayingVideo = null;
+                }
+                renderPage(currentPage + 1);
+            }
         });
 
         let searchTimeout;
@@ -592,6 +819,12 @@
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 const query = e.target.value.toLowerCase().trim();
+
+                // 暂停当前播放的视频
+                if (currentPlayingVideo) {
+                    currentPlayingVideo.pause();
+                    currentPlayingVideo = null;
+                }
 
                 if (!query) {
                     filteredTweets = allTweets;
