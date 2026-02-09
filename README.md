@@ -291,7 +291,7 @@ python colorful_state.py
 ```
 
 > **注意**: 在 GitHub Actions 环境中，Monitor 工作流完成后会自动触发 Pages 部署工作流，确保网站内容实时更新。
-```
+
 
 ## 🛠️ 技术架构
 
