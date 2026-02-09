@@ -35,12 +35,7 @@ try:
     print("✅ 数据库连接成功")
     print()
     
-    print("正在执行 schema.sql...")
-    cursor.execute(schema_sql)
-    print("✅ Schema 执行成功")
-    print()
-    
-    # 验证表是否创建
+    # 先检查表是否已存在
     cursor.execute("""
         SELECT EXISTS (
             SELECT FROM information_schema.tables 
@@ -50,9 +45,10 @@ try:
     table_exists = cursor.fetchone()[0]
     
     if table_exists:
-        print("✅ tweets 表已成功创建")
+        print("ℹ️  tweets 表已存在，跳过创建")
+        print()
         
-        # 获取表结构
+        # 显示表信息
         cursor.execute("""
             SELECT column_name, data_type 
             FROM information_schema.columns 
@@ -61,25 +57,70 @@ try:
         """)
         columns = cursor.fetchall()
         
-        print()
         print("表结构:")
         for col_name, col_type in columns:
             print(f"  - {col_name}: {col_type}")
         
-        # 获取索引
-        cursor.execute("""
-            SELECT indexname 
-            FROM pg_indexes 
-            WHERE tablename = 'tweets';
-        """)
-        indexes = cursor.fetchall()
-        
+        # 获取记录数
+        cursor.execute("SELECT COUNT(*) FROM tweets;")
+        count = cursor.fetchone()[0]
         print()
-        print("索引:")
-        for idx in indexes:
-            print(f"  - {idx[0]}")
+        print(f"当前记录数: {count}")
+        
     else:
-        print("⚠️  tweets 表创建失败")
+        print("正在创建数据库表...")
+        try:
+            cursor.execute(schema_sql)
+            print("✅ Schema 执行成功")
+            print()
+            
+            # 验证表是否创建
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'tweets'
+                );
+            """)
+            table_created = cursor.fetchone()[0]
+            
+            if table_created:
+                print("✅ tweets 表已成功创建")
+                
+                # 获取表结构
+                cursor.execute("""
+                    SELECT column_name, data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'tweets'
+                    ORDER BY ordinal_position;
+                """)
+                columns = cursor.fetchall()
+                
+                print()
+                print("表结构:")
+                for col_name, col_type in columns:
+                    print(f"  - {col_name}: {col_type}")
+                
+                # 获取索引
+                cursor.execute("""
+                    SELECT indexname 
+                    FROM pg_indexes 
+                    WHERE tablename = 'tweets';
+                """)
+                indexes = cursor.fetchall()
+                
+                print()
+                print("索引:")
+                for idx in indexes:
+                    print(f"  - {idx[0]}")
+            else:
+                print("⚠️  tweets 表创建失败")
+                
+        except psycopg2.Error as e:
+            # 如果是触发器已存在的错误，忽略它
+            if "already exists" in str(e):
+                print("ℹ️  数据库对象已存在（这是正常的）")
+            else:
+                raise
     
     cursor.close()
     conn.close()
@@ -98,6 +139,8 @@ except psycopg2.Error as e:
     print("1. DATABASE_URL 是否正确")
     print("2. 数据库用户是否有创建表的权限")
     print("3. 网络连接是否正常")
+    exit(1)
     
 except Exception as e:
     print(f"❌ 发生错误: {e}")
+    exit(1)
