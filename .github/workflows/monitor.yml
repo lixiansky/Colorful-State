@@ -1,5 +1,6 @@
 name: Colorful State Monitor
 
+on:
   schedule:
     # 每天 UTC 0点到14点 (北京时间 8:00 - 22:00)，每2小时执行一次
     - cron: '0 0-14/2 * * *'
