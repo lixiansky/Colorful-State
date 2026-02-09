@@ -3,6 +3,9 @@
 [![GitHub](https://img.shields.io/badge/GitHub-Colorful--State-blue?logo=github)](https://github.com/lixiansky/Colorful-State)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+[![Website](https://img.shields.io/badge/Website-Live%20Demo-fe2c55?logo=github&logoColor=white)](https://lixiansky.github.io/Colorful-State/)
+
+**在线演示**: [https://lixiansky.github.io/Colorful-State/](https://lixiansky.github.io/Colorful-State/)
 
 一个基于 **Playwright Stealth** 技术的 Twitter 推文采集系统，自动抓取指定用户的推文，使用 **DeepSeek API** 翻译成中文，并存储到 **Neon PostgreSQL** 数据库中。
 
@@ -292,34 +295,17 @@ python colorful_state.py
 
 ## 🛠️ 技术架构
 
-```
-┌─────────────────┐
-│  Nitter 实例    │
-│  (xcancel.com)  │
-└────────┬────────┘
-         │
-         │ Playwright + Stealth
-         ↓
-┌─────────────────┐
-│  推文抓取模块    │
-│  - 文本内容     │
-│  - 图片/视频    │
-│  - 元数据       │
-└────────┬────────┘
-         │
-         │ DeepSeek API
-         ↓
-┌─────────────────┐
-│  翻译模块       │
-│  (temp=1.3)     │
-└────────┬────────┘
-         │
-         │ psycopg2
-         ↓
-┌─────────────────┐
-│  Neon Database  │
-│  (PostgreSQL)   │
-└─────────────────┘
+```mermaid
+graph TD
+    A[Nitter 实例] -->|Playwright + Stealth| B[推文抓取模块]
+    B -->|提取数据| C{数据处理}
+    C -->|文本内容| D[DeepSeek API]
+    D -->|翻译 (temp=1.3)| E[数据整合]
+    C -->|图片/视频| E
+    C -->|元数据| E
+    E -->|psycopg2| F[(Neon Database)]
+    F -->|自动触发| G[GitHub Actions]
+    G -->|构建 & 部署| H[GitHub Pages]
 ```
 
 ## ❓ 常见问题
