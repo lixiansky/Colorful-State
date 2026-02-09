@@ -1,8 +1,10 @@
 name: Colorful State Monitor
 
-on:
   schedule:
-    - cron: '*/10 * * * *'  # 每10分钟运行一次
+    # 每天 UTC 0点到14点 (北京时间 8:00 - 22:00)，每2小时执行一次
+    - cron: '0 0-14/2 * * *'
+    # 每天 UTC 14点到23点 (北京时间 22:00 - 08:00)，每3小时执行一次
+    - cron: '0 17-23/3 * * *'
   workflow_dispatch:  # 支持手动触发
     inputs:
       force_rescrape:
