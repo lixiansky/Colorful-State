@@ -1,15 +1,15 @@
 name: Deploy to GitHub Pages
 
 on:
-  schedule:
-    - cron: '*/30 * * * *'  # 每 30 分钟更新一次
+  repository_dispatch:
+    types: [scraper-completed]  # 由 monitor.yml 触发
   workflow_dispatch:  # 允许手动触发
   push:
     branches:
       - main
     paths:
       - 'export_to_pages.py'
-      - 'docs/**'
+      - 'docs/index.html'
 
 permissions:
   contents: write
