@@ -416,6 +416,9 @@ def save_tweet_to_db(tweet):
             DO UPDATE SET
                 content = EXCLUDED.content,
                 content_zh = EXCLUDED.content_zh,
+                images = EXCLUDED.images,
+                video_url = EXCLUDED.video_url,
+                source_url = EXCLUDED.source_url,
                 updated_at = CURRENT_TIMESTAMP
             RETURNING id;
         """, (
