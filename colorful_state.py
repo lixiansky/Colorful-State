@@ -773,7 +773,17 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
                     'video_url': video_url
                 }
                 
-                print(f"[{username}/{tweet_id}] 成功从 {instance} 抓取推文")
+                # 输出提取摘要
+                print(f"[{username}/{tweet_id}] " + "=" * 60)
+                print(f"[{username}/{tweet_id}] 📊 提取摘要:")
+                print(f"[{username}/{tweet_id}]   - 内容: {tweet_data['content'][:50]}...")
+                print(f"[{username}/{tweet_id}]   - 图片: {len(images)} 张")
+                if video_url:
+                    print(f"[{username}/{tweet_id}]   - 视频: ✅ {video_url[:80]}...")
+                else:
+                    print(f"[{username}/{tweet_id}]   - 视频: ❌ 未找到")
+                print(f"[{username}/{tweet_id}] " + "=" * 60)
+                
                 context.close()
                 browser.close()
                 return tweet_data
