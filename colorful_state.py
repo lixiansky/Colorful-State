@@ -418,7 +418,6 @@ def scrape_nitter_with_playwright(target, dynamic_instances=None):
                             
                             # 提取封面图
                             poster = video_tag.get('poster', '')
-                            poster_added = False
                             if poster:
                                 if poster.startswith('//'):
                                     full_poster = 'https:' + poster
@@ -435,15 +434,6 @@ def scrape_nitter_with_playwright(target, dynamic_instances=None):
                                         poster_added = True
                                 else:
                                     print(f"[{target}] ⚠️ 封面图无法访问，跳过: {full_poster}")
-                            
-                            # 如果没有封面图(或它是空的)，且有视频链接，尝试生成
-                            if not poster_added and video_url:
-                                print(f"[{target}] ⚠️ 视频没有封面图，尝试生成...")
-                                generated_poster = extract_video_frame(video_url)
-                                if generated_poster:
-                                    if generated_poster not in images:
-                                        images.append(generated_poster)
-                                    print(f"[{target}] ✅ 视频封面生成成功: {generated_poster}")
                         
                         # 方法3: 检查 video source 标签
                         if not video_url:
@@ -473,6 +463,27 @@ def scrape_nitter_with_playwright(target, dynamic_instances=None):
                                         video_url = href
                                     print(f"[{target}] 找到视频 (link): {video_url[:80]}...")
                                     break
+                        
+                        # [通用逻辑] 如果没有封面图(或它是空的)，且有视频链接，尝试生成
+                        # 此时 poster_added 变量可能未定义(如果没进方法1)，需要重新判断
+                        has_poster = False
+                        # 简单检查 images 列表里是否已有图片，且视频存在
+                        # 注意：推文可能有多张图，这里假定如果 images 为空或者只有头像（已过滤），且有视频，则需要封面
+                        # 更严谨的做法是：如果 poster_added 为 True，或者 images 不为空
+                        
+                        # 重新计算 poster_added 状态
+                        if 'poster_added' not in locals():
+                            poster_added = False
+                            
+                        if not poster_added and video_url:
+                            # 再次检查 images 列表，防止重复添加
+                            if not images: 
+                                print(f"[{target}] ⚠️ 视频没有封面图，尝试生成...")
+                                generated_poster = extract_video_frame(video_url)
+                                if generated_poster:
+                                    if generated_poster not in images:
+                                        images.append(generated_poster)
+                                    print(f"[{target}] ✅ 视频封面生成成功: {generated_poster}")
                         
                         # 如果仍未找到，记录调试信息
                         if not video_url:
@@ -894,7 +905,6 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
                         
                         # 提取封面图
                         poster = video_tag.get('poster', '')
-                        poster_added = False
                         if poster:
                             if poster.startswith('//'):
                                 full_poster = 'https:' + poster
@@ -911,23 +921,6 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
                                     poster_added = True
                             else:
                                 print(f"[{username}/{tweet_id}] ⚠️ 封面图无法访问，跳过: {full_poster}")
-                        
-                        # 如果没有封面图(或它是空的)，且有视频链接，尝试生成
-                        if not poster_added and video_url:
-                            print(f"[{username}/{tweet_id}] ⚠️ 视频没有封面图，尝试生成...")
-                            generated_poster = extract_video_frame(video_url)
-                            if generated_poster:
-                                if generated_poster not in images:
-                                    images.append(generated_poster)
-                                print(f"[{username}/{tweet_id}] ✅ 视频封面生成成功: {generated_poster}")
-                                full_poster = 'https:' + poster
-                            elif poster.startswith('/'):
-                                full_poster = instance.rstrip('/') + poster
-                            else:
-                                full_poster = poster
-                            full_poster = get_original_image_url(full_poster)
-                            if full_poster not in images:
-                                images.append(full_poster)
                     
                     # 方法3: 检查 video source 标签
                     if not video_url:
@@ -957,6 +950,20 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
                                     video_url = href
                                 print(f"[{username}/{tweet_id}] 找到视频 (link): {video_url[:80]}...")
                                 break
+                    
+                    # [通用逻辑] 如果没有封面图，且有视频链接，尝试生成
+                    if 'poster_added' not in locals():
+                        poster_added = False
+                        
+                    if not poster_added and video_url:
+                         # 再次检查 images 列表
+                        if not images:
+                            print(f"[{username}/{tweet_id}] ⚠️ 视频没有封面图，尝试生成...")
+                            generated_poster = extract_video_frame(video_url)
+                            if generated_poster:
+                                if generated_poster not in images:
+                                    images.append(generated_poster)
+                                print(f"[{username}/{tweet_id}] ✅ 视频封面生成成功: {generated_poster}")
                     
                     if not video_url:
                         # 检查是否有视频指示器
