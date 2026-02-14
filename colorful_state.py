@@ -140,24 +140,33 @@ def extract_video_frame(video_url):
     temp_image = None
     
     try:
-        print(f"[视频] 正在下载视频以提取封面: {video_url[:60]}...")
+        # 1. 判断是否为 M3U8 流媒体
+        is_m3u8 = '.m3u8' in video_url.lower()
         
-        # 1. 下载视频到临时文件
-        headers = {
-            "User-Agent": get_random_user_agent()
-        }
-        response = requests.get(video_url, stream=True, timeout=60, headers=headers)
-        if response.status_code != 200:
-            print(f"[视频] 下载失败，状态码: {response.status_code}")
-            return None
-            
-        fd, temp_video = tempfile.mkstemp(suffix='.mp4')
-        with os.fdopen(fd, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+        if is_m3u8:
+            print(f"[视频] 检测到 M3U8 流媒体，尝试直接在线读取: {video_url[:60]}...")
+            # 对于 M3U8，直接将 URL 传给 OpenCV (需要 FFmpeg 支持)
+            cap = cv2.VideoCapture(video_url)
+        else:
+            print(f"[视频] 正在下载视频以提取封面: {video_url[:60]}...")
+            # 1. 下载视频到临时文件
+            headers = {
+                "User-Agent": get_random_user_agent()
+            }
+            response = requests.get(video_url, stream=True, timeout=60, headers=headers)
+            if response.status_code != 200:
+                print(f"[视频] 下载失败，状态码: {response.status_code}")
+                return None
                 
+            fd, temp_video = tempfile.mkstemp(suffix='.mp4')
+            with os.fdopen(fd, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            # 打开临时文件
+            cap = cv2.VideoCapture(temp_video)
+
         # 2. 使用 OpenCV 提取中间帧
-        cap = cv2.VideoCapture(temp_video)
         if not cap.isOpened():
             print(f"[视频] 无法打开视频文件")
             return None
