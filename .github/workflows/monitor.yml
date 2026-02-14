@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: false
+      repair_mode:
+        description: '启动修复模式 (修复坏封面)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   scrape:
@@ -50,6 +55,7 @@ jobs:
         env:
           TWITTER_USERS: ${{ secrets.TWITTER_USERS }}
           FORCE_RESCRAPE: ${{ github.event.inputs.force_rescrape || 'false' }}
+          REPAIR_MODE: ${{ github.event.inputs.repair_mode || 'false' }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}

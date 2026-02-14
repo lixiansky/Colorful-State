@@ -1025,11 +1025,68 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
         browser.close()
     return None
 
+def get_tweets_needing_repair():
+    """查询数据库中需要修复封面的推文 (包含 name=small 的图片)"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 查找 images 字段中包含 'name=small' 的记录
+        # 注意: 这是一个简单的文本匹配，适用于 JSONB 转文本后的查询
+        cursor.execute("""
+            SELECT tweet_id, author, images 
+            FROM tweets 
+            WHERE images::text LIKE '%name=small%';
+        """)
+        
+        results = []
+        for row in cursor.fetchall():
+            results.append({
+                'tweet_id': row[0],
+                'username': row[1],
+                'images': row[2]
+            })
+            
+        cursor.close()
+        conn.close()
+        return results
+    except Exception as e:
+        print(f"[数据库] ❌ 查询待修复推文失败: {e}")
+        return []
+
 def main():
     print(f"[{datetime.now()}] 启动 Colorful State 监控系统...")
     
     # 从本地缓存加载可用实例
     instances = load_instances()
+
+    # 检查修复模式
+    repair_mode = os.environ.get('REPAIR_MODE', 'false').lower() == 'true'
+    if repair_mode:
+        print(f"\n[系统] 🔧 启动修复模式 (REPAIR_MODE)")
+        tweets_to_repair = get_tweets_needing_repair()
+        
+        if not tweets_to_repair:
+            print("[修复] 没有发现需要修复的推文 (没有包含 name=small 的图片)")
+            return
+            
+        print(f"[修复] 发现 {len(tweets_to_repair)} 条推文包含低清图片，开始修复...")
+        
+        for i, info in enumerate(tweets_to_repair):
+            print(f"\n--- 正在修复 ({i+1}/{len(tweets_to_repair)}): {info['username']}/{info['tweet_id']} ---")
+            try:
+                # 重新抓取并保存（save_tweet_to_db 会处理更新）
+                tweet = scrape_tweet_by_id(info['username'], info['tweet_id'], instances)
+                if tweet:
+                    save_tweet_to_db(tweet)
+                    print(f"[修复] ✅ 修复成功")
+                else:
+                    print(f"[修复] ⚠️ 修复失败: 无法重新抓取")
+            except Exception as e:
+                print(f"[修复] ❌ 处理异常: {e}")
+                
+        print("\n[系统] 修复任务完成，退出。")
+        return
 
     while True:
         cycle_start = time.time()
