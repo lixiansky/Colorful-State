@@ -1026,32 +1026,72 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
     return None
 
 def get_tweets_needing_repair():
-    """查询数据库中需要修复封面的推文 (包含 name=small 的图片)"""
+    """
+    查询数据库中需要修复封面的推文:
+    1. 包含 name=small 的图片 (低清)
+    2. 图片链接无法访问 (403/404/503 或 非图片类型)
+    """
+    print("[修复] 正在扫描数据库中所有视频推文的封面健康状态 (这可能需要一点时间)...")
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 查找 images 字段中包含 'name=small' 的记录
-        # 注意: 这是一个简单的文本匹配，适用于 JSONB 转文本后的查询
+        # 获取所有带视频的推文
         cursor.execute("""
             SELECT tweet_id, author, images 
             FROM tweets 
-            WHERE images::text LIKE '%name=small%';
+            WHERE video_url IS NOT NULL AND video_url != '';
         """)
         
-        results = []
-        for row in cursor.fetchall():
-            results.append({
-                'tweet_id': row[0],
-                'username': row[1],
-                'images': row[2]
-            })
-            
+        all_video_tweets = cursor.fetchall()
         cursor.close()
         conn.close()
+        
+        print(f"[修复] 数据库中共有 {len(all_video_tweets)} 条视频推文，开始逐个检查...")
+        
+        results = []
+        for i, row in enumerate(all_video_tweets):
+            tweet_id = row[0]
+            author = row[1]
+            images = row[2] # 这是一个列表
+            
+            needs_repair = False
+            
+            # 如果没有图片，肯定要修
+            if not images or len(images) == 0:
+                print(f"[检查] ❌ {author}/{tweet_id}: 没有封面图 -> 加入修复列表")
+                needs_repair = True
+            else:
+                # 检查第一张图 (通常是封面)
+                cover_url = images[0]
+                
+                # 使用 check_url_accessibility 进行全面检查 (包含 name=small, 404, Content-Type 等)
+                # 注意: 为了加快扫描，我们可以先快速过滤 name=small，再做网络请求
+                if 'name=small' in cover_url:
+                     print(f"[检查] ⚠️ {author}/{tweet_id}: 发现低清缩略图 -> 加入修复列表")
+                     needs_repair = True
+                else:
+                    # 只有看起来正常的 URL 才进行网络检查
+                    # 打印进度 (每10个打印一次，避免刷屏)
+                    if i % 10 == 0:
+                        print(f"[扫描进度] {i}/{len(all_video_tweets)}...")
+                        
+                    if not check_url_accessibility(cover_url):
+                        print(f"[检查] ❌ {author}/{tweet_id}: 封面无法访问 -> 加入修复列表")
+                        needs_repair = True
+            
+            if needs_repair:
+                results.append({
+                    'tweet_id': tweet_id,
+                    'username': author,
+                    'images': images
+                })
+        
         return results
     except Exception as e:
         print(f"[数据库] ❌ 查询待修复推文失败: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def main():
