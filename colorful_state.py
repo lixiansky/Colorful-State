@@ -1007,8 +1007,23 @@ def main():
         if tweet_urls:
             print(f"\n[模式] 单条推文抓取模式")
             
-            # 检查状态
-            scraped, pending = check_tweet_status(tweet_urls)
+            # 检查是否强制重新抓取
+            force_rescrape = os.environ.get('FORCE_RESCRAPE', 'false').lower() == 'true'
+            
+            if force_rescrape:
+                print(f"[系统] ⚠️  强制重新抓取模式开启: 将重新处理所有 {len(tweet_urls)} 条推文")
+                # 解析所有 URL 但不检查数据库状态，直接视为待处理
+                pending_urls = tweet_urls
+                parsed_tweets = []
+                for url in pending_urls:
+                    parsed = parse_tweet_url(url)
+                    if parsed:
+                        parsed_tweets.append(parsed)
+                pending = parsed_tweets
+                scraped = [] # 假装没有已抓取的
+            else:
+                # 正常检查状态
+                scraped, pending = check_tweet_status(tweet_urls)
             
             # 打印报告
             print_status_report(scraped, pending)
