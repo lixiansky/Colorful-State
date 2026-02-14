@@ -11,6 +11,10 @@ import psycopg2
 from psycopg2.extras import Json
 from dotenv import load_dotenv
 from openai import OpenAI
+import cv2
+import tempfile
+import base64
+import shutil
 
 # 加载环境变量
 load_dotenv()
@@ -72,6 +76,135 @@ def load_instances():
     print("[系统] 缓存不存在或损坏，采用内置兜底实例列表")
     return NITTER_INSTANCES
 
+def upload_to_imgbb(image_path_or_url):
+    """
+    上传图片到 ImgBB 图床
+    支持本地文件路径或网络 URL
+    需要配置环境变量: IMGBB_API_KEY
+    """
+    api_key = os.environ.get('IMGBB_API_KEY', '').strip()
+    if not api_key:
+        print("[图床] ImgBB 未配置 API Key, 无法上传")
+        return None
+    
+    try:
+        # 准备图片数据
+        img_base64 = None
+        
+        # 判断是本地文件还是 URL
+        if os.path.exists(image_path_or_url):
+            print(f"[图床] 正在上传本地文件: {image_path_or_url}")
+            with open(image_path_or_url, "rb") as image_file:
+                img_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+        else:
+            print(f"[图床] 正在从 {image_path_or_url} 下载图片...")
+            img_response = requests.get(image_path_or_url, timeout=30, headers={
+                'User-Agent': get_random_user_agent(),
+                'Referer': 'https://twitter.com/'
+            })
+            img_response.raise_for_status()
+            img_base64 = base64.b64encode(img_response.content).decode('utf-8')
+        
+        # 上传到 ImgBB
+        print("[图床] 正在上传到 ImgBB...")
+        upload_response = requests.post(
+            'https://api.imgbb.com/1/upload',
+            data={
+                'key': api_key,
+                'image': img_base64
+            },
+            timeout=30
+        )
+        result = upload_response.json()
+        
+        if result.get('success'):
+            url = result['data']['url']
+            print(f"[图床] ImgBB 上传成功: {url}")
+            return url
+        else:
+            print(f"[图床] ImgBB 上传失败: {result}")
+            return None
+    except Exception as e:
+        print(f"[图床] ImgBB 上传异常: {e}")
+        return None
+
+def extract_video_frame(video_url):
+    """
+    提取视频中间帧并上传到图床
+    返回: 图床 URL 或 None
+    """
+    if not video_url:
+        return None
+        
+    temp_video = None
+    temp_image = None
+    
+    try:
+        print(f"[视频] 正在下载视频以提取封面: {video_url[:60]}...")
+        
+        # 1. 下载视频到临时文件
+        headers = {
+            "User-Agent": get_random_user_agent()
+        }
+        response = requests.get(video_url, stream=True, timeout=60, headers=headers)
+        if response.status_code != 200:
+            print(f"[视频] 下载失败，状态码: {response.status_code}")
+            return None
+            
+        fd, temp_video = tempfile.mkstemp(suffix='.mp4')
+        with os.fdopen(fd, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+                
+        # 2. 使用 OpenCV 提取中间帧
+        cap = cv2.VideoCapture(temp_video)
+        if not cap.isOpened():
+            print(f"[视频] 无法打开视频文件")
+            return None
+
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if frame_count <= 0:
+            # 尝试读取第一帧
+            frame_count = 1
+            
+        #即便只有几帧，取中间或第一帧
+        middle_frame = max(0, frame_count // 2)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, middle_frame)
+
+        ret, frame = cap.read()
+        cap.release()
+        
+        if not ret:
+            print(f"[视频] 读取视频帧失败")
+            return None
+            
+        # 3. 保存帧到临时图片
+        fd_img, temp_image = tempfile.mkstemp(suffix='.jpg')
+        os.close(fd_img) # mkstemp 返回的 fd 需要关闭，因为 cv2.imwrite 使用路径
+        
+        cv2.imwrite(temp_image, frame)
+        print(f"[视频] 成功提取帧到: {temp_image}")
+        
+        # 4. 上传到图床
+        img_url = upload_to_imgbb(temp_image)
+        return img_url
+        
+    except Exception as e:
+        print(f"[视频] 提取封面异常: {e}")
+        return None
+    finally:
+        # 清理临时文件
+        if temp_video and os.path.exists(temp_video):
+            try:
+                os.remove(temp_video)
+            except:
+                pass
+        if temp_image and os.path.exists(temp_image):
+            try:
+                os.remove(temp_image)
+            except:
+                pass
+
 def get_original_image_url(nitter_url):
     """尝试从 Nitter 的代理 URL 中还原出 Twitter/X 的原始图片地址"""
     import urllib.parse
@@ -109,6 +242,29 @@ def get_original_image_url(nitter_url):
         print(f"[图片解析] 还原 URL 失败 {nitter_url}: {e}")
         
     return nitter_url
+
+def check_url_accessibility(url):
+    """
+    检查 URL 是否可访问 (返回 200 OK)
+    使用流式请求以避免下载大文件
+    """
+    if not url:
+        return False
+        
+    try:
+        headers = {
+            "User-Agent": get_random_user_agent()
+        }
+        # 设置较短的超时时间 (5秒)，使用 stream=True 只读取响应头
+        response = requests.get(url, stream=True, timeout=5, headers=headers)
+        if response.status_code == 200:
+            return True
+        else:
+            print(f"[访问检查] URL 返回非 200 状态码: {response.status_code} - {url[:60]}...")
+            return False
+    except Exception as e:
+        print(f"[访问检查] 访问失败: {url[:60]}... 错误: {e}")
+        return False
 
 def scrape_nitter_with_playwright(target, dynamic_instances=None):
     """使用 Playwright 模拟浏览器访问 Nitter 并抓取最新推文"""
@@ -253,6 +409,7 @@ def scrape_nitter_with_playwright(target, dynamic_instances=None):
                             
                             # 提取封面图
                             poster = video_tag.get('poster', '')
+                            poster_added = False
                             if poster:
                                 if poster.startswith('//'):
                                     full_poster = 'https:' + poster
@@ -261,8 +418,23 @@ def scrape_nitter_with_playwright(target, dynamic_instances=None):
                                 else:
                                     full_poster = poster
                                 full_poster = get_original_image_url(full_poster)
-                                if full_poster not in images:
-                                    images.append(full_poster)
+                                
+                                # 验证封面图是否可访问
+                                if check_url_accessibility(full_poster):
+                                    if full_poster not in images:
+                                        images.append(full_poster)
+                                        poster_added = True
+                                else:
+                                    print(f"[{target}] ⚠️ 封面图无法访问，跳过: {full_poster}")
+                            
+                            # 如果没有封面图(或它是空的)，且有视频链接，尝试生成
+                            if not poster_added and video_url:
+                                print(f"[{target}] ⚠️ 视频没有封面图，尝试生成...")
+                                generated_poster = extract_video_frame(video_url)
+                                if generated_poster:
+                                    if generated_poster not in images:
+                                        images.append(generated_poster)
+                                    print(f"[{target}] ✅ 视频封面生成成功: {generated_poster}")
                         
                         # 方法3: 检查 video source 标签
                         if not video_url:
@@ -713,8 +885,32 @@ def scrape_tweet_by_id(username, tweet_id, dynamic_instances=None):
                         
                         # 提取封面图
                         poster = video_tag.get('poster', '')
+                        poster_added = False
                         if poster:
                             if poster.startswith('//'):
+                                full_poster = 'https:' + poster
+                            elif poster.startswith('/'):
+                                full_poster = instance.rstrip('/') + poster
+                            else:
+                                full_poster = poster
+                            full_poster = get_original_image_url(full_poster)
+                            
+                            # 验证封面图是否可访问
+                            if check_url_accessibility(full_poster):
+                                if full_poster not in images:
+                                    images.append(full_poster)
+                                    poster_added = True
+                            else:
+                                print(f"[{username}/{tweet_id}] ⚠️ 封面图无法访问，跳过: {full_poster}")
+                        
+                        # 如果没有封面图(或它是空的)，且有视频链接，尝试生成
+                        if not poster_added and video_url:
+                            print(f"[{username}/{tweet_id}] ⚠️ 视频没有封面图，尝试生成...")
+                            generated_poster = extract_video_frame(video_url)
+                            if generated_poster:
+                                if generated_poster not in images:
+                                    images.append(generated_poster)
+                                print(f"[{username}/{tweet_id}] ✅ 视频封面生成成功: {generated_poster}")
                                 full_poster = 'https:' + poster
                             elif poster.startswith('/'):
                                 full_poster = instance.rstrip('/') + poster

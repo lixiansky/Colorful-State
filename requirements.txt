@@ -2,6 +2,7 @@ playwright==1.41.0
 playwright-stealth==1.0.6
 beautifulsoup4==4.12.3
 requests==2.31.0
-psycopg2-binary==2.9.9
+psycopg2-binary
 python-dotenv==1.0.0
 openai>=1.30.0
+opencv-python>=4.10.0
