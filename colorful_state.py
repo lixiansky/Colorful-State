@@ -255,18 +255,36 @@ def get_original_image_url(nitter_url):
 def check_url_accessibility(url):
     """
     检查 URL 是否可访问 (返回 200 OK)
-    使用流式请求以避免下载大文件
+    增加检查:
+    1. 是否为低清缩略图 (name=small) -> 拒绝
+    2. Content-Type 是否为图片 (image/*) -> 拒绝 HTML (404/503 页面的伪装)
     """
     if not url:
         return False
         
     try:
+        from urllib.parse import unquote
+        decoded_url = unquote(url)
+        
+        # 规则1: 拒绝低清缩略图，强制重新生成
+        # 检查原始 URL 和解码后的 URL
+        if 'name=small' in url or 'name=small' in decoded_url:
+            print(f"[访问检查] ⚠️ 拒绝低清缩略图 (name=small): {url[:60]}...")
+            return False
+
         headers = {
             "User-Agent": get_random_user_agent()
         }
         # 设置较短的超时时间 (5秒)，使用 stream=True 只读取响应头
-        response = requests.get(url, stream=True, timeout=5, headers=headers)
+        response = requests.get(url, stream=True, timeout=10, headers=headers)
+        
         if response.status_code == 200:
+            # 规则2: 检查 Content-Type
+            content_type = response.headers.get('Content-Type', '').lower()
+            if not content_type.startswith('image/'):
+                print(f"[访问检查] ⚠️ URL 返回非图片类型 ({content_type}): {url[:60]}...")
+                return False
+                
             return True
         else:
             print(f"[访问检查] URL 返回非 200 状态码: {response.status_code} - {url[:60]}...")
